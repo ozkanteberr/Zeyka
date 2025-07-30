@@ -1,0 +1,42 @@
+
+services:
+  db:
+    image: postgres:15
+    environment:
+      - POSTGRES_USER=admin
+      - POSTGRES_PASSWORD=secret
+      - POSTGRES_DB=akilli_magaza_db
+    ports:
+      - "5433:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+
+  user_service:
+    build: ../backend/user-service
+    ports:
+      - "8001:8000"
+    volumes:
+      - ../backend/user-service:/app
+    depends_on:
+      - db
+
+  product_service:
+    build: ../backend/product-service
+    ports:
+      - "8002:8000"
+    volumes:
+      - ../backend/product-service:/app
+    depends_on:
+      - db
+
+  order_service:
+    build: ../backend/order-service
+    ports:
+      - "8003:8000"
+    volumes:
+      - ../backend/order-service:/app
+    depends_on:
+      - db
+
+volumes:
+  pg_data:

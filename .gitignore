@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+
+# Next.js / Node.js
+/frontend/web-app/node_modules
+/frontend/web-app/.next
+/frontend/web-app/npm-debug.log*
+/frontend/web-app/yarn-debug.log*
+/frontend/web-app/yarn-error.log*
+/frontend/web-app/.pnp
+/frontend/web-app/.pnp.js
+
+# IDE/Editor klasörleri
+.vscode/
+.idea/
+
+# İşletim Sistemi dosyaları
+.DS_Store
+Thumbs.db
