@@ -1,3 +1,5 @@
+import numpy as np
+
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.security import APIKeyHeader
 from sqlalchemy.orm import Session
@@ -7,6 +9,7 @@ from jose import JWTError
 from . import crud, models, schemas, security
 from .database import SessionLocal, engine
 from fastapi.middleware.cors import CORSMiddleware
+
 
 models.Base.metadata.create_all(bind=engine)
 
@@ -76,3 +79,16 @@ def read_product_endpoint(product_id: int, db: Session = Depends(get_db)):
     if db_product is None:
         raise HTTPException(status_code=404, detail="Product not found")
     return db_product
+
+@app.get("/search/", response_model=List[schemas.Product])
+def search_products_endpoint(q: str, db: Session = Depends(get_db)):
+    if not q:
+        return []
+
+    # Gerçek model yerine, arama sorgusu için rastgele bir vektör üretiyoruz.
+    print(f"'{q}' için arama yapılıyor, rastgele bir vektör oluşturuluyor...")
+    query_vector = np.random.rand(384).tolist()
+
+    # Bu rastgele vektöre en yakın ürünleri veritabanında arıyoruz.
+    products = crud.search_products_by_vector(db, query_vector=query_vector)
+    return products

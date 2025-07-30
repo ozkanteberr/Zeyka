@@ -1,7 +1,7 @@
 
 services:
   db:
-    image: postgres:15
+    image: pgvector/pgvector:pg15 
     environment:
       - POSTGRES_USER=admin
       - POSTGRES_PASSWORD=secret
@@ -37,6 +37,22 @@ services:
       - ../backend/order-service:/app
     depends_on:
       - db
+
+  recommendation_service:
+    build: ../backend/recommendation-service
+    ports:
+    - "8004:8000"
+    volumes:
+    - ../backend/recommendation-service:/app
+    depends_on:
+    - db
+
+  ai_assistant_service:
+    build: ../backend/ai-assistant-service
+    ports:
+    - "8006:8000"
+    volumes:
+    - ../backend/ai-assistant-service:/app  
 
 volumes:
   pg_data:
