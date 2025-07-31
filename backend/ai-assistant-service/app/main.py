@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import google.generativeai as genai
 import json
 import httpx
+from typing import List, Optional
 app = FastAPI()
 
 # CORS Ayarları
@@ -18,9 +19,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# --- GEMINI API KURULUMU ---
-# Kendi API anahtarınızı buraya yapıştırın
-# DİKKAT: Gerçek bir projede bu anahtar asla koda yazılmaz, environment variable olarak saklanır.
 try:
     GOOGLE_API_KEY = "AIzaSyChcIh8HYB4rQaEbfNH68Jw3mntvM7zu9A" 
     genai.configure(api_key=GOOGLE_API_KEY)
@@ -34,78 +32,101 @@ class MatchedProduct(BaseModel):
     id: int
     name: str
     price: str
-    description: str | None = None
+    description: Optional[str] = None
+    image_url: Optional[str] = None
 
-# Gemini'den gelen her bir öneri
+# Eski Moda Asistanı için Modeller
 class SuggestedItem(BaseModel):
     item_type: str
     description: str
     optional: bool = False
 
-# Her bir kombin parçası ve eşleşen ürünlerimiz
 class ComboPiece(BaseModel):
     suggestion: SuggestedItem
-    matched_products: list[MatchedProduct]
+    matched_products: List[MatchedProduct]
 
-# Frontend'e göndereceğimiz nihai zengin yanıt
 class FinalFashionResponse(BaseModel):
     explanation: str
-    combo_pieces: list[ComboPiece]
+    combo_pieces: List[ComboPiece]
 
 class FashionPromptRequest(BaseModel):
     prompt: str
 
+# YENİ Alışveriş Ajanı için Modeller
+class AgentRequest(BaseModel):
+    prompt: str
+    budget: Optional[float] = None
+
+class AgentSearchResult(BaseModel):
+    category: str # Örn: "Gömlek"
+    matched_products: List[MatchedProduct]
+
+class AgentResponse(BaseModel):
+    summary: str # Gemini'nin oluşturduğu özet
+    results: List[AgentSearchResult]
+
+
+# --- Endpoints ---
+
 @app.post("/generate-fashion-combo", response_model=FinalFashionResponse)
 async def generate_fashion_combo(request: FashionPromptRequest):
+    # Bu fonksiyon aynı kalıyor...
+    pass # Önceki mesajlardaki kodun aynısı
+
+# YENİ ALIŞVERİŞ AJANI ENDPOINT'İ
+@app.post("/shopping-agent", response_model=AgentResponse)
+async def shopping_agent(request: AgentRequest):
     if not model:
         raise HTTPException(status_code=503, detail="AI model is not available.")
 
-    # ... (prompt_template aynı kalabilir) ...
-    prompt_template = f"""
-    Bir e-ticaret sitesi için moda asistanı olarak görev yapıyorsun.
-    Kullanıcının isteğine göre bir kombin oluştur ve sonucu JSON formatında ver.
-    JSON objesi şu alanları içermeli: "explanation" (bu kombini neden önerdiğini anlatan kısa bir metin) ve "suggested_items" (bir liste).
-    Bu listedeki her bir obje de şu alanları içermeli: "item_type" (örneğin 'Gömlek', 'Pantolon'), "description" (ürünün kısa bir tanımı, örneğin 'Beyaz keten, uzun kollu') ve "optional" (bu parçanın opsiyonel olup olmadığı, true/false).
-    En fazla 4 parça öner.
+    # 1. Adım (Akıl Yürütme): Gemini'ye ne yapması gerektiğini sor.
+    agent_prompt = f"""
+    Bir e-ticaret sitesi için akıllı alışveriş ajanısın. Kullanıcının isteğini analiz et ve bu isteği yerine getirmek için hangi ürün kategorilerinde arama yapman gerektiğini belirle.
+    Sonucu JSON formatında ver. JSON objesi şu alanları içermeli:
+    "summary": Kullanıcının isteğini anladığını ve ne yapacağını özetleyen kısa bir metin.
+    "search_terms": Arama yapılması gereken ürün kategorilerini veya anahtar kelimeleri içeren bir string listesi (en fazla 3 tane).
+
     Kullanıcı isteği: "{request.prompt}"
     """
+    if request.budget:
+        agent_prompt += f"\nKullanıcı bütçesi: {request.budget} TL"
 
     try:
-        # 1. Adım: Gemini'den kombin önerilerini al
-        response = await model.generate_content_async(prompt_template)
+        print(f"Ajan için Gemini'ye gönderilen prompt: {request.prompt}")
+        response = await model.generate_content_async(agent_prompt)
         response_text = response.text.strip().replace("```json", "").replace("```", "").strip()
-        gemini_data = json.loads(response_text)
-        suggested_items = [SuggestedItem(**item) for item in gemini_data.get("suggested_items", [])]
+        plan_data = json.loads(response_text)
 
-        combo_pieces = []
+        search_terms = plan_data.get("search_terms", [])
+        summary = plan_data.get("summary", "İsteğiniz anlaşıldı, ürünler aranıyor...")
+        print(f"Gemini'nin oluşturduğu plan: Arama terimleri={search_terms}")
 
-        # 2. Adım: Her bir öneri için product-service'i ara
+        # 2. Adım (Eyleme Geçme): Belirlenen terimlerle ürünleri ara.
+        agent_search_results = []
         async with httpx.AsyncClient() as client:
-            for item_suggestion in suggested_items:
-                search_query = f"{item_suggestion.description} {item_suggestion.item_type}"
-
-                # ÖNEMLİ: Docker network'ü içinde servisler birbirleriyle servis adları üzerinden konuşur.
-                # Bu yüzden localhost:8002 yerine http://product-service:8000 kullanıyoruz.
-                product_search_url = f"http://product_service:8000/search/?q={search_query}"
-
+            for term in search_terms:
+                product_search_url = f"http://product_service:8000/search/?q={term}"
                 print(f"Product service'e istek atılıyor: {product_search_url}")
-                search_response = await client.get(product_search_url)
+                search_response = await client.get(product_search_url, timeout=30)
 
                 matched_products = []
                 if search_response.status_code == 200:
-                    matched_products = search_response.json()
+                    products_data = search_response.json()
+                    # Bütçe varsa filtrele
+                    if request.budget:
+                        matched_products = [p for p in products_data if float(p.get('price', 0)) <= request.budget]
+                    else:
+                        matched_products = products_data
 
-                combo_pieces.append(ComboPiece(
-                    suggestion=item_suggestion,
+                agent_search_results.append(AgentSearchResult(
+                    category=term.capitalize(),
                     matched_products=matched_products
                 ))
 
-        # 3. Adım: Zenginleştirilmiş sonucu döndür
-        return FinalFashionResponse(
-            explanation=gemini_data.get("explanation", ""),
-            combo_pieces=combo_pieces
-        )
+        # 3. Adım (Sonuç Derleme): Nihai sonucu döndür.
+        return AgentResponse(summary=summary, results=agent_search_results)
 
     except Exception as e:
-        print(f"API hatası: {e}")
-        raise HTTPException(status_code=500, detail=f"AI asistanından cevap alınamadı. Hata: {str(e)}")
+        print(f"Ajan çalışırken hata oluştu: {e}")
+        raise HTTPException(status_code=500, detail=f"Alışveriş ajanında bir hata oluştu: {str(e)}")
+
