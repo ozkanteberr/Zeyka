@@ -53,6 +53,16 @@ services:
     - "8006:8000"
     volumes:
     - ../backend/ai-assistant-service:/app
+    depends_on:
+    - db  
+  community_service:
+    build: ../backend/community-service
+    ports:
+    - "8008:8000"
+    volumes:
+    - ../backend/community-service:/app
+    depends_on:
+    - db  
 
 volumes:
   pg_data:

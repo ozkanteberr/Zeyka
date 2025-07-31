@@ -10,7 +10,9 @@ from typing import List, Optional
 app = FastAPI()
 
 # CORS Ayarları
-origins = ["http://localhost:3000"]
+origins = [
+    "http://localhost:3000",
+]
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
@@ -70,8 +72,53 @@ class AgentResponse(BaseModel):
 
 @app.post("/generate-fashion-combo", response_model=FinalFashionResponse)
 async def generate_fashion_combo(request: FashionPromptRequest):
-    # Bu fonksiyon aynı kalıyor...
-    pass # Önceki mesajlardaki kodun aynısı
+    if not model:
+        raise HTTPException(status_code=503, detail="AI model is not available.")
+
+    prompt_template = f"""
+    Bir e-ticaret sitesi için moda asistanı olarak görev yapıyorsun.
+    Kullanıcının isteğine göre bir kombin oluştur ve sonucu JSON formatında ver.
+    JSON objesi şu alanları içermeli: "explanation" (bu kombini neden önerdiğini anlatan kısa bir metin) ve "suggested_items" (bir liste).
+    Bu listedeki her bir obje de şu alanları içermeli: "item_type" (örneğin 'Gömlek', 'Pantolon'), "description" (ürünün kısa bir tanımı, örneğin 'Beyaz keten, uzun kollu') ve "optional" (bu parçanın opsiyonel olup olmadığı, true/false).
+    En fazla 8 parça öner.
+    Kullanıcı isteği: "{request.prompt}"
+    """
+
+    try:
+        # 1. Adım: Gemini'den kombin önerilerini al
+        gemini_response = await model.generate_content_async(prompt_template)
+        response_text = gemini_response.text.strip().replace("```json", "").replace("```", "").strip()
+        gemini_data = json.loads(response_text)
+        suggested_items = [SuggestedItem(**item) for item in gemini_data.get("suggested_items", [])]
+
+        combo_pieces = []
+
+        # 2. Adım: Her bir öneri için product-service'i ara
+        async with httpx.AsyncClient() as client:
+            for item_suggestion in suggested_items:
+                search_query = f"{item_suggestion.description} {item_suggestion.item_type}"
+                product_search_url = f"http://product_service:8000/search/?q={search_query}"
+
+                search_response = await client.get(product_search_url)
+
+                matched_products = []
+                if search_response.status_code == 200:
+                    matched_products = search_response.json()
+
+                combo_pieces.append(ComboPiece(
+                    suggestion=item_suggestion,
+                    matched_products=matched_products
+                ))
+
+        # 3. Adım: Zenginleştirilmiş sonucu döndür (EKSİK OLAN BUYDU)
+        return FinalFashionResponse(
+            explanation=gemini_data.get("explanation", ""),
+            combo_pieces=combo_pieces
+        )
+
+    except Exception as e:
+        print(f"API hatası: {e}")
+        raise HTTPException(status_code=500, detail=f"AI asistanından cevap alınamadı. Hata: {str(e)}")
 
 # YENİ ALIŞVERİŞ AJANI ENDPOINT'İ
 @app.post("/shopping-agent", response_model=AgentResponse)
