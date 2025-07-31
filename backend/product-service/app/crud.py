@@ -17,7 +17,13 @@ def get_product(db: Session, product_id: int):
 
 def search_products_by_vector(db: Session, query_vector: list, limit: int = 10):
     results = db.query(models.Product).from_statement(
-        text("SELECT * FROM products ORDER BY embedding <=> :query_vector LIMIT :limit")
+        text("SELECT * FROM products WHERE embedding IS NOT NULL ORDER BY embedding <=> :query_vector LIMIT :limit")
+    ).params(query_vector=str(query_vector), limit=limit).all()
+    return results
+
+def search_products_by_image_vector(db: Session, query_vector: list, limit: int = 10):
+    results = db.query(models.Product).from_statement(
+        text("SELECT * FROM products WHERE embedding IS NOT NULL ORDER BY embedding <=> :query_vector LIMIT :limit")
     ).params(query_vector=str(query_vector), limit=limit).all()
     return results
 

@@ -7,6 +7,7 @@ class ProductBase(BaseModel):
     description: str | None = None
     price: Decimal
     stock_quantity: int
+    image_url: str | None = None
 
 class ProductCreate(ProductBase):
     pass

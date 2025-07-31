@@ -52,7 +52,7 @@ services:
     ports:
     - "8006:8000"
     volumes:
-    - ../backend/ai-assistant-service:/app  
+    - ../backend/ai-assistant-service:/app
 
 volumes:
   pg_data:

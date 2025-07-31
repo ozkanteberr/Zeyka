@@ -10,6 +10,12 @@ from . import crud, models, schemas, security
 from .database import SessionLocal, engine
 from fastapi.middleware.cors import CORSMiddleware
 
+from fastapi import File, UploadFile 
+from sentence_transformers import SentenceTransformer
+from PIL import Image
+import requests
+from io import BytesIO
+
 
 models.Base.metadata.create_all(bind=engine)
 
@@ -80,15 +86,37 @@ def read_product_endpoint(product_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Product not found")
     return db_product
 
+print("AI modeli (CLIP) yükleniyor...")
+clip_model = SentenceTransformer('clip-ViT-B-32')
+print("AI modeli başarıyla yüklendi.")
+
 @app.get("/search/", response_model=List[schemas.Product])
 def search_products_endpoint(q: str, db: Session = Depends(get_db)):
     if not q:
         return []
 
-    # Gerçek model yerine, arama sorgusu için rastgele bir vektör üretiyoruz.
-    print(f"'{q}' için arama yapılıyor, rastgele bir vektör oluşturuluyor...")
-    query_vector = np.random.rand(384).tolist()
+    print(f"'{q}' için anlamsal arama yapılıyor...")
+    query_vector = clip_model.encode(q).tolist() 
 
-    # Bu rastgele vektöre en yakın ürünleri veritabanında arıyoruz.
     products = crud.search_products_by_vector(db, query_vector=query_vector)
     return products
+
+@app.post("/visual-search/", response_model=List[schemas.Product])
+async def visual_search_endpoint(db: Session = Depends(get_db), file: UploadFile = File(...)):
+    if not file.content_type.startswith("image/"):
+        raise HTTPException(status_code=400, detail="Yüklenen dosya bir resim olmalıdır.")
+
+    try:
+        # Yüklenen resmi bellekte aç
+        image_bytes = await file.read()
+        image = Image.open(BytesIO(image_bytes))
+
+        # Resmi, yapay zeka modeliyle bir vektöre dönüştür
+        query_vector = clip_model.encode(image).tolist()
+
+        # Bu vektöre en benzer ürünleri veritabanında ara
+        products = crud.search_products_by_image_vector(db, query_vector=query_vector)
+        return products
+    except Exception as e:
+        print(f"Görsel arama sırasında hata: {e}")
+        raise HTTPException(status_code=500, detail="Resim işlenirken bir hata oluştu.")
