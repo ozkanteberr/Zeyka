@@ -1,5 +1,6 @@
-# fastapi
-# uvicorn[standard]
-# pydantic
-# google-generativeai
-# httpx
+fastapi
+uvicorn[standard]
+pydantic
+google-generativeai
+httpx
+python-dotenv

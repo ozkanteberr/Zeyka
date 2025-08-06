@@ -14,5 +14,6 @@ RUN pip install --no-cache-dir \
     pgvector \
     google-generativeai \
     Pillow \
-    requests
+    requests \
+    pydantic-settings
 WORKDIR /app

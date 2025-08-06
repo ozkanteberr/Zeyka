@@ -20,6 +20,9 @@ venv/
 .vscode/
 .idea/
 
+
+**/.env
+
 # İşletim Sistemi dosyaları
 .DS_Store
 Thumbs.db

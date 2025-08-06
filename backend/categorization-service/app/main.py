@@ -13,12 +13,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# --- HUGGING FACE API KURULUMU ---
-HF_TOKEN = "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"
-# Popüler bir YOLOv8 modeli kullanacağız
-API_URL = "https://api-inference.huggingface.co/models/runwayml/stable-diffusion-v1-5"
-HEADERS = {"Authorization": f"Bearer {HF_TOKEN}"}
 # --------------------------------
 
 class CategorizationRequest(BaseModel):

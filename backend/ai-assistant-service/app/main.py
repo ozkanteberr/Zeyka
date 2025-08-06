@@ -6,9 +6,9 @@ from fastapi.middleware.cors import CORSMiddleware
 import google.generativeai as genai
 import json
 import httpx
+from dotenv import load_dotenv
 from typing import List, Optional
 app = FastAPI()
-
 # CORS Ayarları
 origins = [
     "http://localhost:3000",
@@ -21,13 +21,20 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+load_dotenv()
+
 try:
-    GOOGLE_API_KEY = "AIzaSyChcIh8HYB4rQaEbfNH68Jw3mntvM7zu9A" 
-    genai.configure(api_key=GOOGLE_API_KEY)
+    # Anahtarı artık doğrudan ortam değişkenlerinden (environment variables) alıyoruz
+    api_key = os.getenv("GOOGLE_API_KEY")
+    if not api_key:
+        raise ValueError("GOOGLE_API_KEY .env dosyasında bulunamadı.")
+
+    genai.configure(api_key=api_key)
     model = genai.GenerativeModel('gemini-1.5-pro-latest')
 except Exception as e:
-    print(f"Gemini modeli yüklenirken hata oluştu: {e}")
+    print(f"Gemini modeli kurulurken hata oluştu: {e}")
     model = None
+
 # -------------------------
 
 class MatchedProduct(BaseModel):

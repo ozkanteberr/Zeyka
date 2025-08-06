@@ -39,7 +39,7 @@ services:
   ai_assistant_service:
     build: ../backend/ai-assistant-service
     ports: ["8006:8000"]
-    volumes: ["../backend/ai-assistant-service/app:/app/app"]
+    volumes: ["../backend/ai-assistant-service:/app"]
     networks: [zeyka-net]
 
   community_service:
