@@ -1,17 +1,8 @@
-# Resmi ve hafif bir Python imajını temel al
-FROM python:3.11-slim
+# 1. Adım: İnternet gerektirmeyen, daha önce indirdiğimiz temel imajı kullan
+FROM zeyka-base-ai:latest
 
-# Konteyner içindeki çalışma klasörünü ayarla
-WORKDIR /app
-
-# Önce sadece gereksinimler dosyasını kopyala ve kur
-# Bu sayede kod her değiştiğinde kütüphaneler tekrar kurulmaz, derleme hızlanır
-COPY ./requirements.txt /app/requirements.txt
-RUN pip install --no-cache-dir -r requirements.txt
-
-# Geri kalan tüm uygulama kodunu kopyala
+# 2. Adım: Sadece bu servise ait kodları kopyala
 COPY ./app /app/app
 
-# Konteyner çalıştığında hangi komutun çalışacağını belirt
-# Bu komut, FastAPI uygulamasını başlatır
+# 3. Adım (Eksik Olan Buydu): Uygulamayı başlatma komutunu ekle
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

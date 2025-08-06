@@ -1,0 +1,18 @@
+# Dosya Yolu: backend/Dockerfile.base
+FROM python:3.11-slim
+RUN pip install --no-cache-dir --upgrade pip
+RUN pip install --no-cache-dir \
+    fastapi \
+    uvicorn[standard] \
+    pydantic \
+    sqlalchemy \
+    psycopg2-binary \
+    passlib[bcrypt] \
+    python-jose[cryptography] \
+    httpx \
+    numpy \
+    pgvector \
+    google-generativeai \
+    Pillow \
+    requests
+WORKDIR /app

@@ -1,9 +1,10 @@
-fastapi
-uvicorn[standard]
-sqlalchemy
-psycopg2-binary
-passlib[bcrypt]
-python-jose[cryptography]
-python-multipart
-sentence-transformers
-Pillow
+# fastapi
+# uvicorn[standard]
+# sqlalchemy
+# psycopg2-binary
+# passlib[bcrypt]
+# python-jose[cryptography]
+# python-multipart
+# sentence-transformers
+# Pillow
+# pgvector

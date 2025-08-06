@@ -16,4 +16,3 @@ class Product(Base):
     image_url = Column(String, nullable=True)
     created_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
     embedding = Column(Vector(512), nullable=True)
-    category = Column(String, nullable=True)

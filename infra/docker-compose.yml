@@ -1,7 +1,6 @@
-
 services:
   db:
-    image: pgvector/pgvector:pg15 
+    image: pgvector/pgvector:pg15
     environment:
       - POSTGRES_USER=admin
       - POSTGRES_PASSWORD=secret
@@ -10,59 +9,57 @@ services:
       - "5433:5432"
     volumes:
       - pg_data:/var/lib/postgresql/data
+    networks:
+      - zeyka-net
 
   user_service:
     build: ../backend/user-service
-    ports:
-      - "8001:8000"
-    volumes:
-      - ../backend/user-service:/app
-    depends_on:
-      - db
+    ports: ["8001:8000"]
+    volumes: ["../backend/user-service/app:/app/app"]
+    networks: [zeyka-net]
 
   product_service:
     build: ../backend/product-service
-    ports:
-      - "8002:8000"
-    volumes:
-      - ../backend/product-service:/app
-    depends_on:
-      - db
+    ports: ["8002:8000"]
+    volumes: ["../backend/product-service/app:/app/app"]
+    networks: [zeyka-net]
 
   order_service:
     build: ../backend/order-service
-    ports:
-      - "8003:8000"
-    volumes:
-      - ../backend/order-service:/app
-    depends_on:
-      - db
+    ports: ["8003:8000"]
+    volumes: ["../backend/order-service/app:/app/app"]
+    networks: [zeyka-net]
 
   recommendation_service:
     build: ../backend/recommendation-service
-    ports:
-    - "8004:8000"
-    volumes:
-    - ../backend/recommendation-service:/app
-    depends_on:
-    - db
+    ports: ["8004:8000"]
+    volumes: ["../backend/recommendation-service/app:/app/app"]
+    networks: [zeyka-net]
 
   ai_assistant_service:
     build: ../backend/ai-assistant-service
-    ports:
-    - "8006:8000"
-    volumes:
-    - ../backend/ai-assistant-service:/app
-    depends_on:
-    - db  
+    ports: ["8006:8000"]
+    volumes: ["../backend/ai-assistant-service/app:/app/app"]
+    networks: [zeyka-net]
+
   community_service:
     build: ../backend/community-service
+    ports: ["8008:8000"]
+    volumes: ["../backend/community-service/app:/app/app"]
+    networks: [zeyka-net]
+
+  categorization_service:
+    build: ../backend/categorization-service
     ports:
-    - "8008:8000"
+      - "8009:8000"
     volumes:
-    - ../backend/community-service:/app
-    depends_on:
-    - db  
+      - ../backend/categorization-service/app:/app/app
+    depends_on: [db]
+    networks: [zeyka-net]  
 
 volumes:
   pg_data:
+
+networks:
+  zeyka-net:
+    driver: bridge

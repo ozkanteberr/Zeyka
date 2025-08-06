@@ -1,0 +1,9 @@
+fastapi
+uvicorn[standard]
+pydantic
+Pillow
+requests
+passlib[bcrypt]
+python-jose[cryptography]
+sqlalchemy
+psycopg2-binary

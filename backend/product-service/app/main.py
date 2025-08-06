@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from typing import List
 from jose import JWTError
 
+
 from . import crud, models, schemas, security
 from .database import SessionLocal, engine
 from fastapi.middleware.cors import CORSMiddleware
@@ -15,7 +16,7 @@ from sentence_transformers import SentenceTransformer
 from PIL import Image
 import requests
 from io import BytesIO
-
+from sqlalchemy import cast, Numeric 
 
 models.Base.metadata.create_all(bind=engine)
 
@@ -90,16 +91,7 @@ print("AI modeli (CLIP) yükleniyor...")
 clip_model = SentenceTransformer('clip-ViT-B-32')
 print("AI modeli başarıyla yüklendi.")
 
-@app.get("/search/", response_model=List[schemas.Product])
-def search_products_endpoint(q: str, db: Session = Depends(get_db)):
-    if not q:
-        return []
 
-    print(f"'{q}' için anlamsal arama yapılıyor...")
-    query_vector = clip_model.encode(q).tolist() 
-
-    products = crud.search_products_by_vector(db, query_vector=query_vector)
-    return products
 
 @app.post("/visual-search/", response_model=List[schemas.Product])
 async def visual_search_endpoint(db: Session = Depends(get_db), file: UploadFile = File(...)):
@@ -120,3 +112,26 @@ async def visual_search_endpoint(db: Session = Depends(get_db), file: UploadFile
     except Exception as e:
         print(f"Görsel arama sırasında hata: {e}")
         raise HTTPException(status_code=500, detail="Resim işlenirken bir hata oluştu.")
+
+
+@app.get("/search/", response_model=List[schemas.Product])
+def search_products_endpoint(q: str | None = None, category: str | None = None, max_price: float | None = None, db: Session = Depends(get_db)):
+    print(f"'{q}' için arama yapılıyor... Kategori: {category}, Maks. Fiyat: {max_price}")
+    products = crud.search_products_by_keyword(db, query=q, category=category, max_price=max_price)
+    return products
+
+
+@app.get("/test-price-filter/", response_model=List[schemas.Product])
+def test_price_filter(max_price: float | None = None, category: str | None = None, db: Session = Depends(get_db)):
+    """
+    Hem fiyata hem de kategoriye göre filtreleme yaparak test etmek için geçici endpoint.
+    """
+    print(f"Filtre testi çalışıyor. Maks. fiyat: {max_price}, Kategori: {category}")
+    try:
+        results = crud.test_price_and_category_filter(db, max_price=max_price, category=category)
+
+        print(f"Veritabanından {len(results)} adet sonuç bulundu.")
+        return results
+    except Exception as e:
+        print(f"Veritabanı sorgusunda hata: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
